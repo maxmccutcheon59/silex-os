@@ -67,7 +67,11 @@
     async function api(path, body) {
       const res = await fetch(path, {
         method: body === undefined ? "GET" : "POST",
-        headers: { "Content-Type": "application/json", "X-Silex-Token": TOKEN },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Silex-Token": TOKEN,
+          "X-Silex-Role": "admin",
+        },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       render(await res.json());

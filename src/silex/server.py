@@ -7,13 +7,25 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from silex.auth import parse_role, require
 from silex.errors import SilexError
 from silex.plant import Plant
 
 STATIC = Path(__file__).parent / "static"
 PLANT = Plant()
-TOKEN = secrets.token_urlsafe(24)
 MAX_BODY = 16_384
+
+
+def _boot_token() -> str:
+    preset = os.environ.get("SILEX_CONSOLE_TOKEN")
+    if preset:
+        if len(preset) < 16:
+            raise SilexError("SILEX_CONSOLE_TOKEN is too short")
+        return preset
+    return secrets.token_urlsafe(24)
+
+
+TOKEN = _boot_token()
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -61,6 +73,11 @@ class Handler(BaseHTTPRequestHandler):
             if not _authorized(self):
                 _send(self, 401, {"error": "missing token"})
                 return
+            try:
+                require(path, parse_role(self.headers.get("X-Silex-Role") or "admin"))
+            except SilexError as exc:
+                _send(self, 403, {"error": str(exc)})
+                return
             _send(self, 200, PLANT.snapshot())
             return
         if path in {"/", "/index.html"}:
@@ -85,6 +102,11 @@ class Handler(BaseHTTPRequestHandler):
         if fn is None:
             self.send_error(404)
             return
+        try:
+            require(path, parse_role(self.headers.get("X-Silex-Role") or "admin"))
+        except SilexError as exc:
+            _send(self, 403, {"error": str(exc)})
+            return
         length = int(self.headers.get("Content-Length", "0") or 0)
         if length > MAX_BODY:
             _send(self, 413, {"error": "payload too large"})
@@ -106,8 +128,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(host: str = "127.0.0.1", port: int = 8080) -> None:
-    if host not in {"127.0.0.1", "localhost", "::1"} and os.environ.get("SILEX_ALLOW_REMOTE") != "1":
+    remote = host not in {"127.0.0.1", "localhost", "::1"}
+    if remote and os.environ.get("SILEX_ALLOW_REMOTE") != "1":
         raise SilexError("refusing non-local bind; set SILEX_ALLOW_REMOTE=1 to override")
+    if remote and not os.environ.get("SILEX_CONSOLE_TOKEN"):
+        raise SilexError("remote bind requires SILEX_CONSOLE_TOKEN")
     httpd = ThreadingHTTPServer((host, port), Handler)
     print(f"Silex console  http://{host}:{port}")
     httpd.serve_forever()
