@@ -1,6 +1,6 @@
 [project]
 name = "silex"
-version = "0.3.1"
+version = "0.4.0"
 description = "Authorized work operating system"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,7 +25,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-silex = ["static/*"]
+silex = ["static/*", "fixtures/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

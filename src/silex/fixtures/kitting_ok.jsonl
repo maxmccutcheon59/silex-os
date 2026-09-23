@@ -1,0 +1,6 @@
+{"step":"release","effects":{"order-1":{"_kind":"work_order","status":"released"}}}
+{"step":"confirm","effects":{"parts-1":{"_kind":"parts","present":true}}}
+{"step":"pick","effects":{"cell-1":{"_kind":"cell","ready":true,"busy":true},"tote-1":{"_kind":"tote","held":true}}}
+{"step":"place","effects":{"kit-1":{"_kind":"kit","complete":true}}}
+{"step":"quality","effects":{"quality-1":{"_kind":"gate","pass":true}}}
+{"step":"close","effects":{"order-1":{"status":"closed"},"cell-1":{"ready":true,"busy":false}}}
