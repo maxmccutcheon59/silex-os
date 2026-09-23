@@ -2,18 +2,34 @@
 
 ## Threat model
 
-Silex assumes models, scripts, and adapters will try to act without permission. The kernel must fail closed.
+Models, scripts, and adapters will try to act without permission. The kernel fails closed.
 
-## Rules
+## Kernel
 
-- No step mutates the graph without a live writ for `(actor, action, resource)`.
+- No graph mutation without a live writ for `(actor, action, resource)`.
 - Agents propose. Executing actors are separate identities.
-- Denied or failed steps roll the graph back.
-- API keys live in environment variables only. Never in the repo, ledger, or UI.
-- Planner output is allow-listed to known step names. Unknown tokens are dropped.
-- Ledger payloads must not include `SILEX_LLM_KEY` or raw provider secrets.
-- The console binds to 127.0.0.1 by default. Do not expose it to a plant network without auth in front.
+- Denied or failed steps restore the prior graph.
+- Step names are allow-listed. Unknown verbs are dropped.
+- Proposal text is capped. Provider payloads and API keys are not logged.
+
+## Console
+
+- Binds to `127.0.0.1` by default.
+- Non-local binds require `SILEX_ALLOW_REMOTE=1`.
+- POST bodies capped at 16 KiB.
+- JSON-only object bodies.
+- Generic 500 responses. No stack traces to the client.
+- `nosniff`, `DENY` framing, `no-store`, strict CSP for the local page.
+
+## Export
+
+- Ledger export paths must resolve under the current working directory.
+
+## Secrets
+
+- `SILEX_LLM_KEY` is environment-only. Never commit it.
+- Do not file public issues that include plant data or credentials.
 
 ## Reporting
 
-Privately notify the repository owner. Do not file public issues that include plant data or credentials.
+Notify the repository owner privately.

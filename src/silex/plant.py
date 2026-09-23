@@ -1,10 +1,21 @@
 from __future__ import annotations
 
 from silex.errors import SilexError
-from silex.planner import Proposal, propose
+from silex.planner import ALLOWED, Proposal, propose
 from silex.runtime import Job, Status
 from silex.wedge import KITTING_STEPS, build_kitting_cell
 from silex.writ import Writ
+
+
+def _clean_steps(steps: list[str] | None) -> list[str] | None:
+    if steps is None:
+        return None
+    out: list[str] = []
+    for step in steps:
+        name = str(step).strip().lower()
+        if name in ALLOWED and name not in out:
+            out.append(name)
+    return out or list(KITTING_STEPS)
 
 
 class Plant:
@@ -75,7 +86,7 @@ class Plant:
         return self.snapshot()
 
     def propose(self, text: str) -> dict:
-        self.last_proposal = propose(text)
+        self.last_proposal = propose(text[:500])
         self.ledger.append("plan.proposed", self.last_proposal.as_dict())
         return self.snapshot()
 
@@ -83,13 +94,15 @@ class Plant:
         if self.last_proposal is not None:
             goal = goal or self.last_proposal.goal
             steps = steps or self.last_proposal.steps
-        job = self.runtime.submit(goal or "kit order-1", steps or list(KITTING_STEPS))
+        if isinstance(goal, str):
+            goal = goal[:500]
+        job = self.runtime.submit(goal or "kit order-1", _clean_steps(steps) or list(KITTING_STEPS))
         self.job_id = job.id
         return self.snapshot()
 
     def issue(self, actions: list[str] | None = None) -> dict:
         job = self._job()
-        actions = actions or (job.steps if job else list(KITTING_STEPS))
+        actions = _clean_steps(actions) or (job.steps if job else list(KITTING_STEPS))
         self.active_writ = self.issuer.issue(self.actor.id, actions, "order-1")
         self.ledger.append(
             "writ.issued",
