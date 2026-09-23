@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from silex.channel import Channel
 from silex.graph import Graph, Node
 from silex.runtime import Job
 from silex.writ import Writ
@@ -10,16 +11,18 @@ from silex.writ import Writ
 class ActorAdapter(Protocol):
     actor_id: str
 
-    def execute(self, step: str, job: Job, graph: Graph, writ: Writ) -> None: ...
+    def execute(self, step: str, job: Job, graph: Graph, writ: Writ, ticket: str = "") -> None: ...
 
 
 class SimulatedCell:
     """Stand-in for a real OEM controller. Kernel never talks to metal directly."""
 
-    def __init__(self, actor_id: str = "cell-1") -> None:
+    def __init__(self, actor_id: str = "cell-1", channel: Channel | None = None) -> None:
         self.actor_id = actor_id
+        self.channel = channel or Channel()
 
-    def execute(self, step: str, job: Job, graph: Graph, writ: Writ) -> None:
+    def execute(self, step: str, job: Job, graph: Graph, writ: Writ, ticket: str = "") -> None:
+        self.channel.accept(self.actor_id, step, writ.id, ticket)
         if step == "release":
             graph.require("order-1", status="ready")
             graph.upsert(Node("order-1", "work_order", {"status": "released"}))

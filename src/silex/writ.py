@@ -7,6 +7,7 @@ import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from silex.errors import SilexError
@@ -26,6 +27,20 @@ def _canonical(actor: str, actions: frozenset[str], resource: str, issued_at: st
         "expires_at": expires_at,
     }
     return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+
+
+def load_issuer_secret(secret: str | None = None) -> str:
+    if secret:
+        raw = secret
+    elif os.environ.get("SILEX_ISSUER_SECRET_FILE"):
+        raw = Path(os.environ["SILEX_ISSUER_SECRET_FILE"]).read_text().strip()
+    elif os.environ.get("SILEX_ISSUER_SECRET"):
+        raw = os.environ["SILEX_ISSUER_SECRET"]
+    else:
+        raw = secrets.token_hex(32)
+    if len(raw) < 16:
+        raise SilexError("issuer secret is too short")
+    return raw
 
 
 @dataclass
@@ -61,7 +76,7 @@ class Writ:
 
 class Issuer:
     def __init__(self, secret: str | None = None) -> None:
-        self.secret = (secret or os.environ.get("SILEX_ISSUER_SECRET") or secrets.token_hex(32)).encode()
+        self.secret = load_issuer_secret(secret).encode()
         self.issued: dict[str, Writ] = {}
 
     def _sign(self, writ: Writ) -> str:
@@ -71,8 +86,7 @@ class Issuer:
     def verify(self, writ: Writ) -> bool:
         if not writ.signature:
             return False
-        expected = self._sign(writ)
-        return hmac.compare_digest(expected, writ.signature)
+        return hmac.compare_digest(self._sign(writ), writ.signature)
 
     def issue(
         self,

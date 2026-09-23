@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from silex.adapters import SimulatedCell
 from silex.actors import Actor, ActorKind
+from silex.channel import Channel
 from silex.graph import Graph, Node
 from silex.ledger import Ledger
 from silex.runtime import Job, Runtime
@@ -19,11 +20,12 @@ def build_kitting_cell(*, quality_pass: bool = True) -> tuple[Graph, Ledger, Run
     ledger = Ledger()
     issuer = Issuer()
     runtime = Runtime(graph, ledger, issuer)
-    cell = SimulatedCell("cell-1")
+    channel = Channel()
+    cell = SimulatedCell("cell-1", channel)
 
     def bind(step: str):
         def _fn(job: Job, g: Graph, writ: Writ) -> None:
-            cell.execute(step, job, g, writ)
+            cell.execute(step, job, g, writ, ticket=channel.ticket(cell.actor_id, step, writ.id))
 
         return _fn
 
