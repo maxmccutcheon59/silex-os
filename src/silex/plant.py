@@ -47,6 +47,7 @@ class Plant:
                 "cursor": job.cursor,
                 "status": job.status.value,
                 "reason": job.reason,
+                "halt_code": job.halt_code,
             },
             "writ": None
             if writ is None
@@ -57,6 +58,7 @@ class Plant:
                 "resource": writ.resource,
                 "revoked": writ.revoked,
                 "expires_at": writ.expires_at,
+                "signed": bool(writ.signature),
             },
             "ledger": [
                 {
@@ -123,11 +125,11 @@ class Plant:
         job = self._require_job()
         writ = self._require_writ()
         if job.status not in {Status.CLOSED, Status.HALTED}:
-            self.runtime.tick(job, writ)
+            self.runtime.tick(job, writ, actor=self.actor.id)
         return self.snapshot()
 
     def run(self) -> dict:
-        self.runtime.run(self._require_job(), self._require_writ())
+        self.runtime.run(self._require_job(), self._require_writ(), actor=self.actor.id)
         return self.snapshot()
 
     def _require_job(self) -> Job:

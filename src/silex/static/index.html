@@ -62,11 +62,12 @@
     </section>
   </main>
   <script>
+    const TOKEN = "__SILEX_TOKEN__";
     const $ = (id) => document.getElementById(id);
     async function api(path, body) {
       const res = await fetch(path, {
         method: body === undefined ? "GET" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Silex-Token": TOKEN },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       render(await res.json());
@@ -79,7 +80,7 @@
       else {
         el.textContent = job.status.toUpperCase() + "  " + job.cursor + "/" + job.steps.length;
         el.className = "status " + (job.status === "closed" ? "ok" : job.status === "halted" ? "bad" : "run");
-        if (!s.error) $('reason').textContent = job.reason || job.steps.join(" → ");
+        if (!s.error) $('reason').textContent = (job.halt_code ? job.halt_code + " — " : "") + (job.reason || job.steps.join(" → "));
       }
       $('chain').textContent = s.chain_ok ? "Ledger verified" : "Ledger broken";
       $('graph').textContent = JSON.stringify({ actor: s.actor, writ: s.writ, graph: s.graph }, null, 2);

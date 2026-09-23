@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from silex.plant import Plant
 
 STATIC = Path(__file__).parent / "static"
 PLANT = Plant()
+TOKEN = secrets.token_urlsafe(24)
 MAX_BODY = 16_384
 
 SECURITY_HEADERS = {
@@ -33,6 +35,11 @@ ROUTES = {
 }
 
 
+def _authorized(handler: BaseHTTPRequestHandler) -> bool:
+    offered = handler.headers.get("X-Silex-Token", "")
+    return bool(offered) and secrets.compare_digest(offered, TOKEN)
+
+
 def _send(handler: BaseHTTPRequestHandler, code: int, payload: dict) -> None:
     raw = json.dumps(payload).encode()
     handler.send_response(code)
@@ -51,14 +58,28 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/state":
+            if not _authorized(self):
+                _send(self, 401, {"error": "missing token"})
+                return
             _send(self, 200, PLANT.snapshot())
             return
         if path in {"/", "/index.html"}:
-            self._file(STATIC / "index.html", "text/html; charset=utf-8")
+            html = (STATIC / "index.html").read_text().replace("__SILEX_TOKEN__", TOKEN)
+            raw = html.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            for key, value in SECURITY_HEADERS.items():
+                self.send_header(key, value)
+            self.end_headers()
+            self.wfile.write(raw)
             return
         self.send_error(404)
 
     def do_POST(self) -> None:
+        if not _authorized(self):
+            _send(self, 401, {"error": "missing token"})
+            return
         path = urlparse(self.path).path
         fn = ROUTES.get(path)
         if fn is None:
@@ -82,16 +103,6 @@ class Handler(BaseHTTPRequestHandler):
             _send(self, 400, {"error": str(exc), **PLANT.snapshot()})
         except Exception:
             _send(self, 500, {"error": "internal error"})
-
-    def _file(self, path: Path, content_type: str) -> None:
-        raw = path.read_bytes()
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(raw)))
-        for key, value in SECURITY_HEADERS.items():
-            self.send_header(key, value)
-        self.end_headers()
-        self.wfile.write(raw)
 
 
 def serve(host: str = "127.0.0.1", port: int = 8080) -> None:

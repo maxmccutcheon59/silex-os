@@ -25,7 +25,7 @@ def _safe_out(path: str) -> Path:
 def _export(path: str, out: str) -> int:
     runtime, issuer, actor, _adapter, ledger, _graph = build_replay(path)
     job = runtime.submit(f"export {Path(path).name}", list(KITTING.actions))
-    runtime.run(job, issuer.issue(actor.id, list(KITTING.actions), KITTING.resource))
+    runtime.run(job, issuer.issue(actor.id, list(KITTING.actions), KITTING.resource), actor=actor.id)
     dest = write_ledger(ledger, _safe_out(out))
     print(f"wrote {dest} status={job.status.value} verified={ledger.verify()}")
     return 0 if job.status == Status.CLOSED else 2
