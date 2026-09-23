@@ -2,9 +2,9 @@
 
 Authorization, execution, and audit kernel for mixed robot and agent fleets.
 
-A job is an ordered list of steps. A writ is a capability for `(actor, action, resource)`. The runtime advances a job only when a live writ allows the next step. Failed or denied steps roll world state back. The ledger is hash-chained.
+A job is an ordered list of steps. A writ is a capability for `(actor, action, resource)`. The runtime runs the next step only when a live writ allows it. Failed or denied steps restore prior world state. The ledger is hash-chained.
 
-This is not a safety-certified motion controller. OEM safety systems stay in the loop. See [LEGAL.md](LEGAL.md).
+Silex is not a safety-certified motion controller. OEM safety systems remain in the loop. See [LEGAL.md](LEGAL.md).
 
 ## Install
 
@@ -22,24 +22,19 @@ silex version
 silex demo
 silex replay src/silex/fixtures/kitting_ok.jsonl
 silex agent "kit order-1"
+silex export --out ledger.json
 silex serve --host 127.0.0.1 --port 8080
 ```
 
-Export the last run's ledger after `demo` by using the Python API, or `silex export` after a replay.
-
-```bash
-silex replay
-silex export --out ledger.json
-```
+The console binds to localhost by default.
 
 ## Layout
 
 | Path | Role |
 |---|---|
+| `PROTOCOL.md` | Adapter contract |
+| `SECURITY.md` | Threat model |
 | `src/silex/runtime.py` | Job lifecycle |
 | `src/silex/writ.py` | Capability tokens |
 | `src/silex/ledger.py` | Append-only record |
-| `src/silex/adapters.py` | Simulated cell |
-| `src/silex/replay.py` | Controller log adapter |
-| `PROTOCOL.md` | Adapter contract |
-| `SECURITY.md` | Threat model |
+| `src/silex/replay.py` | Controller-log adapter |
