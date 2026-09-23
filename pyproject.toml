@@ -1,12 +1,15 @@
 [project]
 name = "silex"
-version = "0.1.0"
-description = "Action operating system kernel"
+version = "0.2.0"
+description = "Authorized work operating system kernel"
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[project.scripts]
+silex = "silex.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

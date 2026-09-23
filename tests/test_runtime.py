@@ -1,23 +1,32 @@
-from silex.loop import STEPS, build_demo_world
 from silex.runtime import Status
+from silex.wedge import KITTING_STEPS, build_kitting_cell
 
 
 def test_happy_path_closes():
-    _, ledger, runtime, issuer = build_demo_world()
-    job = runtime.submit("close work order 1", STEPS)
-    for step in STEPS:
-        runtime.tick(job, issuer.issue("cell-1", step, "order-1"))
+    _, ledger, runtime, issuer, actor = build_kitting_cell()
+    job = runtime.submit("kit order-1", KITTING_STEPS)
+    writ = issuer.issue(actor.id, KITTING_STEPS, "order-1")
+    runtime.run(job, writ)
     assert job.status == Status.CLOSED
     assert any(e.kind == "job.closed" for e in ledger.entries)
+    assert ledger.verify()
 
 
 def test_quality_fail_halts():
-    graph, _, runtime, issuer = build_demo_world()
-    graph.upsert(graph.get("quality-1").__class__("quality-1", "gate", {"pass": False}))
-    job = runtime.submit("close work order 1", STEPS)
-    for step in STEPS:
-        runtime.tick(job, issuer.issue("cell-1", step, "order-1"))
-        if job.status == Status.HALTED:
-            break
+    _, _, runtime, issuer, actor = build_kitting_cell(quality_pass=False)
+    job = runtime.submit("kit order-1", KITTING_STEPS)
+    runtime.run(job, issuer.issue(actor.id, KITTING_STEPS, "order-1"))
     assert job.status == Status.HALTED
     assert "quality" in (job.reason or "")
+
+
+def test_refuse_close_incomplete():
+    _, _, runtime, issuer, actor = build_kitting_cell()
+    job = runtime.submit("kit order-1", KITTING_STEPS)
+    runtime.tick(job, issuer.issue(actor.id, KITTING_STEPS, "order-1"))
+    try:
+        job.close()
+        raised = False
+    except RuntimeError:
+        raised = True
+    assert raised

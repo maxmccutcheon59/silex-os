@@ -17,8 +17,14 @@ class Graph:
     def __init__(self) -> None:
         self.nodes: dict[str, Node] = {}
 
-    def upsert(self, node: Node) -> None:
-        self.nodes[node.id] = node
+    def upsert(self, node: Node) -> Node:
+        existing = self.nodes.get(node.id)
+        if existing is None:
+            self.nodes[node.id] = node
+            return node
+        existing.kind = node.kind
+        existing.attrs.update(node.attrs)
+        return existing
 
     def get(self, node_id: str) -> Node | None:
         return self.nodes.get(node_id)
