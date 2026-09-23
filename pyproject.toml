@@ -1,7 +1,7 @@
 [project]
 name = "silex"
-version = "0.6.0"
-description = "Authorized work operating system"
+version = "0.6.1"
+description = "Authorization and audit kernel for robot and agent fleets"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }

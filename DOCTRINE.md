@@ -1,10 +1,7 @@
-# Doctrine
+# Kernel rules
 
-The protocol is the company. See PROTOCOL.md.
-
-1. No action without a live writ.
-2. A writ is a capability: actor, actions, resource, expiry, revoke.
-3. Denied or failed steps leave the world unchanged.
-4. The ledger is append-only and hash-chained.
+1. No graph mutation without a live writ for `(actor, action, resource)`.
+2. Denied or failed steps restore the prior graph.
+3. A job does not close if any step is unfinished.
+4. The ledger verifies or it is not treated as evidence.
 5. Adapters execute. The kernel authorizes and records.
-6. Never close a job the runtime did not finish.
