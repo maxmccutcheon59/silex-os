@@ -22,6 +22,7 @@ class Job:
     id: str
     goal: str
     steps: list[str]
+    resource: str = "order-1"
     status: Status = Status.PENDING
     reason: str | None = None
     cursor: int = 0
@@ -51,44 +52,66 @@ class Runtime:
     def register(self, step: str, fn: StepFn) -> None:
         self.handlers[step] = fn
 
-    def submit(self, goal: str, steps: list[str]) -> Job:
-        job = Job(id=str(uuid4()), goal=goal, steps=steps)
+    def submit(self, goal: str, steps: list[str], resource: str = "order-1") -> Job:
+        job = Job(id=str(uuid4()), goal=goal, steps=list(steps), resource=resource)
         self.jobs[job.id] = job
-        self.ledger.append("job.submitted", {"goal": goal, "steps": steps}, job_id=job.id)
+        self.ledger.append(
+            "job.submitted",
+            {"goal": goal, "steps": list(steps), "resource": resource},
+            job_id=job.id,
+        )
         return job
 
-    def tick(self, job: Job, writ: Writ) -> Job:
+    def tick(self, job: Job, writ: Writ, *, actor: str | None = None) -> Job:
         if job.status in {Status.CLOSED, Status.HALTED}:
             return job
         if job.cursor >= len(job.steps):
             job.close()
             self.ledger.append("job.closed", {"reason": job.reason}, writ_id=writ.id, job_id=job.id)
             return job
+
         step = job.steps[job.cursor]
-        if not writ.allows(writ.actor, step, writ.resource):
-            reason = writ.deny_reason(writ.actor, step, writ.resource) or f"writ {writ.id} does not allow {step}"
+        actor = actor or writ.actor
+        if not writ.allows(actor, step, job.resource):
+            reason = writ.deny_reason(actor, step, job.resource) or f"writ {writ.id} does not allow {step}"
             job.halt(reason)
-            self.ledger.append("job.halted", {"reason": job.reason, "step": step}, writ_id=writ.id, job_id=job.id)
+            self.ledger.append(
+                "job.halted",
+                {"reason": job.reason, "step": step, "actor": actor},
+                writ_id=writ.id,
+                job_id=job.id,
+            )
             return job
-        job.status = Status.RUNNING
+
         fn = self.handlers.get(step)
         if fn is None:
             job.halt(f"no handler for {step}")
             self.ledger.append("job.halted", {"reason": job.reason, "step": step}, writ_id=writ.id, job_id=job.id)
             return job
+
+        prior = self.graph.snapshot()
+        job.status = Status.RUNNING
         try:
             fn(job, self.graph, writ)
-            job.cursor += 1
-            self.ledger.append("job.step", {"step": step}, writ_id=writ.id, job_id=job.id)
         except Exception as exc:
+            self.graph.restore(prior)
             job.halt(str(exc))
-            self.ledger.append("job.halted", {"reason": job.reason, "step": step}, writ_id=writ.id, job_id=job.id)
-        if job.cursor >= len(job.steps) and job.status == Status.RUNNING:
+            self.ledger.append(
+                "job.halted",
+                {"reason": job.reason, "step": step},
+                writ_id=writ.id,
+                job_id=job.id,
+            )
+            return job
+
+        job.cursor += 1
+        self.ledger.append("job.step", {"step": step, "actor": actor}, writ_id=writ.id, job_id=job.id)
+        if job.cursor >= len(job.steps):
             job.close()
             self.ledger.append("job.closed", {"reason": job.reason}, writ_id=writ.id, job_id=job.id)
         return job
 
-    def run(self, job: Job, writ: Writ) -> Job:
+    def run(self, job: Job, writ: Writ, *, actor: str | None = None) -> Job:
         while job.status not in {Status.CLOSED, Status.HALTED}:
-            self.tick(job, writ)
+            self.tick(job, writ, actor=actor)
         return job

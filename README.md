@@ -1,8 +1,10 @@
 # Silex
 
-Authorized work operating system. Nothing consequential moves unless this kernel issued a writ and recorded the result.
+Authorized work operating system.
 
-Models may propose work. They cannot execute it.
+Nothing consequential moves unless this kernel issued a writ and recorded the result. Models may propose work. They cannot execute it.
+
+The product is the protocol in [PROTOCOL.md](PROTOCOL.md). This repo is the reference kernel.
 
 ## Install
 
@@ -17,25 +19,16 @@ pytest -q
 
 ```bash
 silex demo
-silex demo --fail-quality
 silex replay
 silex replay src/silex/fixtures/kitting_fail.jsonl
 silex serve --port 8080
 ```
 
-`replay` runs a recorded controller log through the same writ + ledger path as a live cell. That is how a plant demo starts without buying hardware.
+## Kernel laws
 
-## Architecture
+- No action without a live writ for `(actor, action, resource)`.
+- Failed or denied steps roll the graph back.
+- Jobs do not close incomplete.
+- The ledger verifies or it is not evidence.
 
-| Component | Responsibility |
-|---|---|
-| Actor | Who is acting |
-| Graph | What is true now |
-| Writ | What that actor may do |
-| Policy | Which actions exist for a wedge |
-| Runtime | Advance a job or halt |
-| Ledger | Hash-chained record |
-| Adapter | Simulated cell or controller log |
-| Planner | Propose steps only |
-
-Company rules: [COMPANY.md](COMPANY.md). Kernel laws: [DOCTRINE.md](DOCTRINE.md).
+Company: [COMPANY.md](COMPANY.md). Doctrine: [DOCTRINE.md](DOCTRINE.md).

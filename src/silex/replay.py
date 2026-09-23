@@ -22,6 +22,15 @@ def load_log(path: str | Path) -> list[dict[str, Any]]:
     return lines
 
 
+def _apply_effects(graph: Graph, effects: dict[str, dict[str, Any]]) -> None:
+    for node_id, attrs in effects.items():
+        existing = graph.get(node_id)
+        kind = str(attrs.get("_kind") or (existing.kind if existing else "node"))
+        merged = dict(existing.attrs) if existing else {}
+        merged.update({k: v for k, v in attrs.items() if k != "_kind"})
+        graph.upsert(Node(node_id, kind, merged))
+
+
 class ReplayAdapter:
     """Apply a recorded controller log. Each line must match the authorized step."""
 
@@ -39,11 +48,5 @@ class ReplayAdapter:
             raise SilexError(f"log step {logged!r} does not match authorized {step!r}")
         if event.get("ok", True) is False:
             raise SilexError(str(event.get("error") or f"controller failed on {step}"))
-        for node_id, attrs in (event.get("effects") or {}).items():
-            kind = str(attrs.get("_kind") or graph.get(node_id).kind if graph.get(node_id) else "node")
-            clean = {k: v for k, v in attrs.items() if k != "_kind"}
-            existing = graph.get(node_id)
-            merged = dict(existing.attrs) if existing else {}
-            merged.update(clean)
-            graph.upsert(Node(node_id, existing.kind if existing else kind, merged))
+        _apply_effects(graph, event.get("effects") or {})
         self.cursor += 1

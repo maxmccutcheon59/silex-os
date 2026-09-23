@@ -10,6 +10,9 @@ class Node:
     kind: str
     attrs: dict[str, Any] = field(default_factory=dict)
 
+    def copy(self) -> Node:
+        return Node(self.id, self.kind, dict(self.attrs))
+
 
 class Graph:
     """Live typed state. Single source of what is true now."""
@@ -37,3 +40,9 @@ class Graph:
             if node.attrs.get(k) != v:
                 raise ValueError(f"{node_id}.{k}={node.attrs.get(k)!r} != {v!r}")
         return node
+
+    def snapshot(self) -> dict[str, Node]:
+        return {nid: node.copy() for nid, node in self.nodes.items()}
+
+    def restore(self, nodes: dict[str, Node]) -> None:
+        self.nodes = {nid: node.copy() for nid, node in nodes.items()}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -20,9 +21,12 @@ class Entry:
     job_id: str | None = None
 
 
-def _digest(prev: str, kind: str, payload: dict[str, Any], at: str, entry_id: str) -> str:
-    body = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
-    raw = f"{prev}|{kind}|{body}|{at}|{entry_id}".encode()
+def canonical(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+
+
+def digest_for(prev: str, kind: str, payload: dict[str, Any], at: str, entry_id: str) -> str:
+    raw = f"{prev}|{kind}|{canonical(payload)}|{at}|{entry_id}".encode()
     return sha256(raw).hexdigest()
 
 
@@ -39,6 +43,7 @@ class Ledger:
         writ_id: str | None = None,
         job_id: str | None = None,
     ) -> Entry:
+        payload = deepcopy(payload)
         prev = self.entries[-1].digest if self.entries else self.GENESIS
         at = datetime.now(timezone.utc).isoformat()
         entry_id = str(uuid4())
@@ -48,7 +53,7 @@ class Ledger:
             payload=payload,
             at=at,
             prev=prev,
-            digest=_digest(prev, kind, payload, at, entry_id),
+            digest=digest_for(prev, kind, payload, at, entry_id),
             writ_id=writ_id,
             job_id=job_id,
         )
@@ -58,7 +63,7 @@ class Ledger:
     def verify(self) -> bool:
         prev = self.GENESIS
         for entry in self.entries:
-            expected = _digest(prev, entry.kind, entry.payload, entry.at, entry.id)
+            expected = digest_for(prev, entry.kind, entry.payload, entry.at, entry.id)
             if entry.prev != prev or entry.digest != expected:
                 return False
             prev = entry.digest
