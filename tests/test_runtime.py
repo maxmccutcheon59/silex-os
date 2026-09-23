@@ -1,3 +1,5 @@
+import pytest
+
 from silex.runtime import Status
 from silex.wedge import KITTING_STEPS, build_kitting_cell
 
@@ -5,8 +7,7 @@ from silex.wedge import KITTING_STEPS, build_kitting_cell
 def test_happy_path_closes():
     _, ledger, runtime, issuer, actor = build_kitting_cell()
     job = runtime.submit("kit order-1", KITTING_STEPS)
-    writ = issuer.issue(actor.id, KITTING_STEPS, "order-1")
-    runtime.run(job, writ)
+    runtime.run(job, issuer.issue(actor.id, KITTING_STEPS, "order-1"))
     assert job.status == Status.CLOSED
     assert any(e.kind == "job.closed" for e in ledger.entries)
     assert ledger.verify()
@@ -24,9 +25,5 @@ def test_refuse_close_incomplete():
     _, _, runtime, issuer, actor = build_kitting_cell()
     job = runtime.submit("kit order-1", KITTING_STEPS)
     runtime.tick(job, issuer.issue(actor.id, KITTING_STEPS, "order-1"))
-    try:
+    with pytest.raises(RuntimeError):
         job.close()
-        raised = False
-    except RuntimeError:
-        raised = True
-    assert raised

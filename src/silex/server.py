@@ -5,13 +5,25 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from silex.errors import SilexError
 from silex.plant import Plant
 
 STATIC = Path(__file__).parent / "static"
 PLANT = Plant()
 
+ROUTES = {
+    "/api/reset": lambda body: (PLANT.reset(bool(body.get("quality_pass", True))), PLANT.snapshot())[1],
+    "/api/quality": lambda body: PLANT.set_quality(bool(body.get("pass", True))),
+    "/api/propose": lambda body: PLANT.propose(str(body.get("text", ""))),
+    "/api/submit": lambda body: PLANT.submit(body.get("goal"), body.get("steps")),
+    "/api/issue": lambda body: PLANT.issue(body.get("actions")),
+    "/api/revoke": lambda _body: PLANT.revoke(),
+    "/api/tick": lambda _body: PLANT.tick(),
+    "/api/run": lambda _body: PLANT.run(),
+}
 
-def _json(handler: BaseHTTPRequestHandler, code: int, payload: dict) -> None:
+
+def _send(handler: BaseHTTPRequestHandler, code: int, payload: dict) -> None:
     raw = json.dumps(payload).encode()
     handler.send_response(code)
     handler.send_header("Content-Type", "application/json")
@@ -27,7 +39,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/state":
-            _json(self, 200, PLANT.snapshot())
+            _send(self, 200, PLANT.snapshot())
             return
         if path in {"/", "/index.html"}:
             self._file(STATIC / "index.html", "text/html; charset=utf-8")
@@ -36,38 +48,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        fn = ROUTES.get(path)
+        if fn is None:
+            self.send_error(404)
+            return
         length = int(self.headers.get("Content-Length", "0") or 0)
         body = json.loads(self.rfile.read(length) or b"{}") if length else {}
         try:
-            if path == "/api/reset":
-                PLANT.reset(quality_pass=bool(body.get("quality_pass", True)))
-                _json(self, 200, PLANT.snapshot())
-                return
-            if path == "/api/quality":
-                _json(self, 200, PLANT.set_quality(bool(body.get("pass", True))))
-                return
-            if path == "/api/propose":
-                _json(self, 200, PLANT.propose(str(body.get("text", ""))))
-                return
-            if path == "/api/submit":
-                _json(self, 200, PLANT.submit(body.get("goal"), body.get("steps")))
-                return
-            if path == "/api/issue":
-                _json(self, 200, PLANT.issue(body.get("actions")))
-                return
-            if path == "/api/revoke":
-                _json(self, 200, PLANT.revoke())
-                return
-            if path == "/api/tick":
-                _json(self, 200, PLANT.tick())
-                return
-            if path == "/api/run":
-                _json(self, 200, PLANT.run())
-                return
+            _send(self, 200, fn(body))
+        except SilexError as exc:
+            _send(self, 400, {"error": str(exc), **PLANT.snapshot()})
         except Exception as exc:
-            _json(self, 400, {"error": str(exc), **PLANT.snapshot()})
-            return
-        self.send_error(404)
+            _send(self, 500, {"error": str(exc), **PLANT.snapshot()})
 
     def _file(self, path: Path, content_type: str) -> None:
         raw = path.read_bytes()
@@ -80,5 +72,5 @@ class Handler(BaseHTTPRequestHandler):
 
 def serve(host: str = "127.0.0.1", port: int = 8080) -> None:
     httpd = ThreadingHTTPServer((host, port), Handler)
-    print(f"silex console http://{host}:{port}")
+    print(f"Silex console  http://{host}:{port}")
     httpd.serve_forever()

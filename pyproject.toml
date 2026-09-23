@@ -1,8 +1,11 @@
 [project]
 name = "silex"
-version = "0.3.0"
-description = "Authorized work operating system kernel"
+version = "0.3.1"
+description = "Authorized work operating system"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Max McCutcheon" }]
 dependencies = []
 
 [project.optional-dependencies]
@@ -23,3 +26,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 silex = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

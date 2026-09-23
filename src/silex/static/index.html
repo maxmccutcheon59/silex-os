@@ -3,59 +3,59 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Silex console</title>
+  <title>Silex</title>
   <style>
-    :root { color-scheme: dark; }
+    :root { color-scheme: dark; --bg:#0b0d10; --panel:#12161b; --line:#222a32; --text:#e6edf3; --muted:#8b98a5; --accent:#c9f31d; --halt:#ff6b6b; --run:#7ec8ff; }
     * { box-sizing: border-box; }
-    body { margin: 0; font: 14px/1.45 ui-sans-serif, system-ui; background: #0b0d10; color: #e8edf2; }
-    header { padding: 16px 20px; border-bottom: 1px solid #1d242c; display: flex; justify-content: space-between; gap: 12px; }
-    h1 { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 0; color: #9aa8b5; }
-    main { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; padding: 16px; }
-    section { background: #12161b; border: 1px solid #1d242c; border-radius: 10px; padding: 14px; }
-    h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #7d8b97; }
+    body { margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    header { padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+    h1 { margin: 0; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+    main { display: grid; grid-template-columns: 1.05fr .95fr; gap: 16px; padding: 16px; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+    h2 { margin: 0 0 12px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
     button, textarea { font: inherit; }
-    button { background: #1c2530; color: #e8edf2; border: 1px solid #2a3541; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
-    button.primary { background: #c9f31d; color: #111; border-color: #c9f31d; font-weight: 650; }
+    button { background: #1b222b; color: var(--text); border: 1px solid #2a3440; border-radius: 8px; padding: 8px 11px; cursor: pointer; }
+    button.primary { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 650; }
     button.danger { background: #3a1518; border-color: #6b2a30; }
-    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-    textarea { width: 100%; min-height: 72px; background: #0b0d10; color: inherit; border: 1px solid #2a3541; border-radius: 8px; padding: 8px; }
-    .status { font-size: 22px; font-weight: 650; }
-    .ok { color: #c9f31d; } .bad { color: #ff6b6b; } .run { color: #7ec8ff; }
-    pre { white-space: pre-wrap; background: #0b0d10; padding: 10px; border-radius: 8px; max-height: 280px; overflow: auto; font-size: 12px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+    textarea { width: 100%; min-height: 70px; background: var(--bg); color: inherit; border: 1px solid #2a3440; border-radius: 8px; padding: 10px; }
+    .status { font-size: 20px; font-weight: 650; letter-spacing: .04em; }
+    .ok { color: var(--accent); } .bad { color: var(--halt); } .run { color: var(--run); }
+    pre { white-space: pre-wrap; background: var(--bg); padding: 10px; border-radius: 8px; max-height: 260px; overflow: auto; font-size: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    td { padding: 4px 0; border-bottom: 1px solid #1d242c; vertical-align: top; color: #c5ced6; }
-    .muted { color: #7d8b97; }
+    td { padding: 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: #c5ced6; }
+    .muted { color: var(--muted); }
     @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Silex operator console</h1>
-      <div class="muted">Propose → submit → issue writ → tick. Models do not move metal.</div>
+      <h1>Silex</h1>
+      <div class="muted">Propose. Submit. Issue writ. Execute. Models do not move metal.</div>
     </div>
     <div id="chain" class="muted"></div>
   </header>
   <main>
     <section>
-      <h2>Command</h2>
-      <textarea id="goal" placeholder="kit order-1 for SKU KIT-A"></textarea>
+      <h2>Job</h2>
+      <textarea id="goal" placeholder="Kit order-1 for SKU KIT-A"></textarea>
       <div class="row">
         <button id="propose">Propose</button>
-        <button id="submit">Submit job</button>
+        <button id="submit">Submit</button>
         <button id="issue" class="primary">Issue writ</button>
         <button id="tick">Tick</button>
         <button id="run">Run</button>
         <button id="revoke" class="danger">Revoke</button>
         <button id="failq">Fail quality</button>
-        <button id="reset">Reset cell</button>
+        <button id="reset">Reset</button>
       </div>
-      <div id="jobstatus" class="status">NO JOB</div>
+      <div id="jobstatus" class="status muted">NO JOB</div>
       <p id="reason" class="muted"></p>
       <pre id="proposal"></pre>
     </section>
     <section>
-      <h2>Graph</h2>
+      <h2>State</h2>
       <pre id="graph"></pre>
       <h2>Ledger</h2>
       <table id="ledger"></table>
@@ -69,9 +69,7 @@
         headers: { "Content-Type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
-      const data = await res.json();
-      render(data);
-      return data;
+      render(await res.json());
     }
     function render(s) {
       if (s.error) $('reason').textContent = s.error;
@@ -81,11 +79,11 @@
       else {
         el.textContent = job.status.toUpperCase() + "  " + job.cursor + "/" + job.steps.length;
         el.className = "status " + (job.status === "closed" ? "ok" : job.status === "halted" ? "bad" : "run");
-        $('reason').textContent = job.reason || job.steps.join(" → ");
+        if (!s.error) $('reason').textContent = job.reason || job.steps.join(" → ");
       }
-      $('chain').textContent = s.chain_ok ? "ledger chain ok" : "ledger broken";
+      $('chain').textContent = s.chain_ok ? "Ledger verified" : "Ledger broken";
       $('graph').textContent = JSON.stringify({ actor: s.actor, writ: s.writ, graph: s.graph }, null, 2);
-      $('proposal').textContent = s.proposal ? JSON.stringify(s.proposal, null, 2) : "no proposal";
+      $('proposal').textContent = s.proposal ? JSON.stringify(s.proposal, null, 2) : "No proposal";
       $('ledger').innerHTML = (s.ledger || []).slice().reverse().map(e =>
         `<tr><td>${e.kind}</td><td>${JSON.stringify(e.payload)}</td><td class="muted">${e.digest}</td></tr>`
       ).join("");

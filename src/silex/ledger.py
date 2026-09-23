@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -20,7 +21,8 @@ class Entry:
 
 
 def _digest(prev: str, kind: str, payload: dict[str, Any], at: str, entry_id: str) -> str:
-    raw = f"{prev}|{kind}|{sorted(payload.items())}|{at}|{entry_id}".encode()
+    body = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":"))
+    raw = f"{prev}|{kind}|{body}|{at}|{entry_id}".encode()
     return sha256(raw).hexdigest()
 
 
@@ -56,9 +58,8 @@ class Ledger:
     def verify(self) -> bool:
         prev = self.GENESIS
         for entry in self.entries:
-            if entry.prev != prev:
-                return False
-            if entry.digest != _digest(prev, entry.kind, entry.payload, entry.at, entry.id):
+            expected = _digest(prev, entry.kind, entry.payload, entry.at, entry.id)
+            if entry.prev != prev or entry.digest != expected:
                 return False
             prev = entry.digest
         return True

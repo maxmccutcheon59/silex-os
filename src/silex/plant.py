@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-
-from silex.planner import propose
+from silex.errors import SilexError
+from silex.planner import Proposal, propose
 from silex.runtime import Job, Status
 from silex.wedge import KITTING_STEPS, build_kitting_cell
 from silex.writ import Writ
@@ -18,10 +17,11 @@ class Plant:
         )
         self.quality_pass = quality_pass
         self.active_writ: Writ | None = None
-        self.last_proposal = None
+        self.last_proposal: Proposal | None = None
+        self.job_id: str | None = None
 
     def snapshot(self) -> dict:
-        job = self._current_job()
+        job = self._job()
         writ = self.active_writ
         return {
             "actor": {"id": self.actor.id, "kind": self.actor.kind.value, "vendor": self.actor.vendor},
@@ -63,14 +63,13 @@ class Plant:
             "allowed_steps": list(KITTING_STEPS),
         }
 
-    def _current_job(self) -> Job | None:
-        if not self.runtime.jobs:
+    def _job(self) -> Job | None:
+        if self.job_id is None:
             return None
-        return list(self.runtime.jobs.values())[-1]
+        return self.runtime.jobs.get(self.job_id)
 
     def set_quality(self, passed: bool) -> dict:
-        node = self.graph.require("quality-1")
-        node.attrs["pass"] = passed
+        self.graph.require("quality-1").attrs["pass"] = passed
         self.quality_pass = passed
         self.ledger.append("quality.set", {"pass": passed})
         return self.snapshot()
@@ -81,48 +80,50 @@ class Plant:
         return self.snapshot()
 
     def submit(self, goal: str | None = None, steps: list[str] | None = None) -> dict:
-        if self.last_proposal and (goal is None or steps is None):
+        if self.last_proposal is not None:
             goal = goal or self.last_proposal.goal
             steps = steps or self.last_proposal.steps
-        goal = goal or "kit order-1"
-        steps = steps or list(KITTING_STEPS)
-        self.runtime.submit(goal, steps)
+        job = self.runtime.submit(goal or "kit order-1", steps or list(KITTING_STEPS))
+        self.job_id = job.id
         return self.snapshot()
 
     def issue(self, actions: list[str] | None = None) -> dict:
-        job = self._current_job()
+        job = self._job()
         actions = actions or (job.steps if job else list(KITTING_STEPS))
         self.active_writ = self.issuer.issue(self.actor.id, actions, "order-1")
         self.ledger.append(
             "writ.issued",
             {"actions": sorted(self.active_writ.actions), "resource": "order-1"},
             writ_id=self.active_writ.id,
+            job_id=self.job_id,
         )
         return self.snapshot()
 
     def revoke(self) -> dict:
         if self.active_writ is None:
-            raise ValueError("no writ")
+            raise SilexError("no writ to revoke")
         self.issuer.revoke(self.active_writ.id)
-        self.ledger.append("writ.revoked", {}, writ_id=self.active_writ.id)
+        self.ledger.append("writ.revoked", {}, writ_id=self.active_writ.id, job_id=self.job_id)
         return self.snapshot()
 
     def tick(self) -> dict:
-        job = self._current_job()
-        if job is None:
-            raise ValueError("no job")
-        if self.active_writ is None:
-            raise ValueError("no writ")
-        if job.status in {Status.CLOSED, Status.HALTED}:
-            return self.snapshot()
-        self.runtime.tick(job, self.active_writ)
+        job = self._require_job()
+        writ = self._require_writ()
+        if job.status not in {Status.CLOSED, Status.HALTED}:
+            self.runtime.tick(job, writ)
         return self.snapshot()
 
     def run(self) -> dict:
-        job = self._current_job()
-        if job is None:
-            raise ValueError("no job")
-        if self.active_writ is None:
-            raise ValueError("no writ")
-        self.runtime.run(job, self.active_writ)
+        self.runtime.run(self._require_job(), self._require_writ())
         return self.snapshot()
+
+    def _require_job(self) -> Job:
+        job = self._job()
+        if job is None:
+            raise SilexError("no job submitted")
+        return job
+
+    def _require_writ(self) -> Writ:
+        if self.active_writ is None:
+            raise SilexError("no writ issued")
+        return self.active_writ
