@@ -6,3 +6,4 @@ def test_local_propose_defaults_to_kitting():
     assert p.source == "local"
     assert "pick" in p.steps
     assert "close" in p.steps
+    assert "raw" not in p.as_dict()

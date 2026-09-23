@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from silex.agent import main_text
 from silex.demo import run_demo
 from silex.run_replay import FIXTURES, run_file
 from silex.server import serve
@@ -15,6 +16,8 @@ def main(argv: list[str] | None = None) -> int:
     demo.add_argument("--fail-quality", action="store_true")
     replay = sub.add_parser("replay", help="authorize and replay a controller log")
     replay.add_argument("path", nargs="?", default=str(FIXTURES / "kitting_ok.jsonl"))
+    agent = sub.add_parser("agent", help="agent proposes; kernel still issues the cell writ")
+    agent.add_argument("text", nargs="?", default="kit order-1")
     web = sub.add_parser("serve", help="operator console")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8080)
@@ -25,6 +28,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "replay":
         status = run_file(Path(args.path))
         return 0 if status.value == "closed" else 2
+    if args.cmd == "agent":
+        return main_text(args.text)
     if args.cmd == "serve":
         serve(args.host, args.port)
         return 0

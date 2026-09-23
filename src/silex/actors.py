@@ -10,6 +10,7 @@ class ActorKind(str, Enum):
     AMR = "amr"
     HUMANOID = "humanoid"
     HUMAN = "human"
+    AGENT = "agent"
     POLICY = "policy"
 
 

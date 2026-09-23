@@ -1,10 +1,10 @@
 # Silex
 
-The operating system hardware companies have to call before a robot is allowed to act.
+The operating system hardware companies have to call before a robot — or an agent — is allowed to act.
 
-Windows sold software to PC makers. Silex sells authorization, completion, and proof to anyone who moves metal — arms, AMRs, humanoids, cells. Models propose. This kernel decides.
+Windows sold software to PC makers. Silex sells authorization, completion, and proof. Models and agents propose. This kernel decides.
 
-The contract is [PROTOCOL.md](PROTOCOL.md). Positioning is [COMPANY.md](COMPANY.md).
+Protocol: [PROTOCOL.md](PROTOCOL.md). Company: [COMPANY.md](COMPANY.md). Legal: [LEGAL.md](LEGAL.md). Security: [SECURITY.md](SECURITY.md).
 
 ## Install
 
@@ -18,5 +18,8 @@ pytest -q
 ```bash
 silex demo
 silex replay
+silex agent "kit order-1"
 silex serve --port 8080
 ```
+
+This software is proprietary, unwarranted, and not a safety-certified controller. See LEGAL.md.

@@ -8,17 +8,17 @@ import urllib.request
 from silex.wedge import KITTING_STEPS
 
 ALLOWED = list(KITTING_STEPS)
+_MAX_TEXT = 500
 
 
 class Proposal:
-    def __init__(self, goal: str, steps: list[str], source: str, raw: str = "") -> None:
-        self.goal = goal
+    def __init__(self, goal: str, steps: list[str], source: str) -> None:
+        self.goal = goal[:_MAX_TEXT]
         self.steps = steps
         self.source = source
-        self.raw = raw
 
     def as_dict(self) -> dict:
-        return {"goal": self.goal, "steps": self.steps, "source": self.source, "raw": self.raw}
+        return {"goal": self.goal, "steps": self.steps, "source": self.source}
 
 
 def _sanitize(steps: list[str]) -> list[str]:
@@ -58,7 +58,7 @@ def llm_propose(text: str) -> Proposal | None:
                     f"Steps must be a subset of {ALLOWED}. You cannot execute."
                 ),
             },
-            {"role": "user", "content": text},
+            {"role": "user", "content": text[:_MAX_TEXT]},
         ],
         "temperature": 0,
     }
@@ -71,16 +71,16 @@ def llm_propose(text: str) -> Proposal | None:
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             payload = json.loads(resp.read().decode())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
         return None
     content = payload.get("choices", [{}])[0].get("message", {}).get("content", "")
     try:
         parsed = json.loads(content)
         steps = _sanitize(list(parsed.get("steps", [])))
         goal = str(parsed.get("goal") or text).strip()
-        return Proposal(goal=goal, steps=steps, source="llm", raw=content)
+        return Proposal(goal=goal, steps=steps, source="llm")
     except (json.JSONDecodeError, TypeError, AttributeError):
-        return Proposal(goal=text.strip(), steps=list(ALLOWED), source="llm-fallback", raw=content)
+        return Proposal(goal=text.strip(), steps=list(ALLOWED), source="llm-fallback")
 
 
 def propose(text: str) -> Proposal:
