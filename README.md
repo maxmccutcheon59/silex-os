@@ -6,6 +6,8 @@ A job is an ordered list of steps. A writ is a capability for `(actor, action, r
 
 Silex is not a safety-certified motion controller. OEM safety systems remain in the loop. See [LEGAL.md](LEGAL.md).
 
+**Brief:** [docs/index.html](docs/index.html) (GitHub Pages: Settings → Pages → Deploy from branch `main` / folder `/docs`).
+
 ## Install
 
 ```bash
@@ -26,15 +28,21 @@ silex export --out ledger.json
 silex serve --host 127.0.0.1 --port 8080
 ```
 
-The console binds to localhost by default.
+## Present
+
+| Asset | Use |
+|---|---|
+| [docs/index.html](docs/index.html) | One-page brief |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Control flow |
+| [PROTOCOL.md](PROTOCOL.md) | Adapter contract |
+| `silex demo` / `silex serve` | Live walkthrough |
 
 ## Layout
 
 | Path | Role |
 |---|---|
-| `PROTOCOL.md` | Adapter contract |
-| `SECURITY.md` | Threat model |
 | `src/silex/runtime.py` | Job lifecycle |
 | `src/silex/writ.py` | Capability tokens |
 | `src/silex/ledger.py` | Append-only record |
 | `src/silex/replay.py` | Controller-log adapter |
+| `SECURITY.md` | Threat model |
