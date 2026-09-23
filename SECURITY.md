@@ -7,29 +7,32 @@ Models, scripts, and adapters will try to act without permission. The kernel fai
 ## Kernel
 
 - No graph mutation without a live writ for `(actor, action, resource)`.
-- Agents propose. Executing actors are separate identities.
+- `runtime.tick` requires an explicit `actor` argument.
+- Writs are HMAC-SHA256 signed. Tampered signatures halt with `bad_signature`.
+- Empty action sets are rejected.
 - Denied or failed steps restore the prior graph.
-- Step names are allow-listed. Unknown verbs are dropped.
-- Proposal text is capped. Provider payloads and API keys are not logged.
+- Halt codes: `denied`, `wrong_actor`, `revoked`, `expired`, `no_handler`, `adapter`, `bad_signature`.
+- Agents propose. Executing actors are separate identities.
+- Step names are allow-listed.
+
+## Ledger
+
+- Hash-chained, payload-copied entries.
+- `save` refuses a broken chain.
+- `load` verifies or raises.
 
 ## Console
 
 - Binds to `127.0.0.1` by default.
 - Non-local binds require `SILEX_ALLOW_REMOTE=1`.
+- Session token required on `/api/*` (`X-Silex-Token`).
 - POST bodies capped at 16 KiB.
-- JSON-only object bodies.
-- Generic 500 responses. No stack traces to the client.
-- `nosniff`, `DENY` framing, `no-store`, strict CSP for the local page.
+- Generic 500 responses.
 
 ## Export
 
-- Ledger export paths must resolve under the current working directory.
+- Paths must resolve under the current working directory.
 
 ## Secrets
 
-- `SILEX_LLM_KEY` is environment-only. Never commit it.
-- Do not file public issues that include plant data or credentials.
-
-## Reporting
-
-Notify the repository owner privately.
+- `SILEX_LLM_KEY` and `SILEX_ISSUER_SECRET` are environment-only.
