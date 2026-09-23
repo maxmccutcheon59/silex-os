@@ -21,7 +21,8 @@ def build_replay(path: str | Path) -> tuple[Runtime, Issuer, Actor, ReplayAdapte
     graph.upsert(Node("cell-1", "cell", {"ready": True, "busy": False, "vendor": "log"}))
     graph.upsert(Node("quality-1", "gate", {"pass": True}))
     ledger = Ledger()
-    runtime = Runtime(graph, ledger)
+    issuer = Issuer()
+    runtime = Runtime(graph, ledger, issuer)
     adapter = ReplayAdapter(events)
 
     def bind(step: str):
@@ -33,14 +34,14 @@ def build_replay(path: str | Path) -> tuple[Runtime, Issuer, Actor, ReplayAdapte
     for step in KITTING.actions:
         runtime.register(step, bind(step))
     actor = Actor(id="cell-1", kind=ActorKind.CELL, vendor="log")
-    return runtime, Issuer(), actor, adapter, ledger, graph
+    return runtime, issuer, actor, adapter, ledger, graph
 
 
 def run_file(path: str | Path) -> Status:
     runtime, issuer, actor, _adapter, ledger, graph = build_replay(path)
     job = runtime.submit(f"replay {path}", list(KITTING.actions))
     writ = issuer.issue(actor.id, list(KITTING.actions), KITTING.resource)
-    runtime.run(job, writ)
+    runtime.run(job, writ, actor=actor.id)
     print(f"status   {job.status.value}")
     print(f"reason   {job.reason}")
     print(f"ledger   {len(ledger.entries)} chain_ok={ledger.verify()}")

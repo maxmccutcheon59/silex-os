@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from silex.graph import Graph
 from silex.ledger import Ledger
-from silex.writ import Writ
+from silex.writ import Issuer, Writ
 
 
 class Status(str, Enum):
@@ -15,6 +15,17 @@ class Status(str, Enum):
     RUNNING = "running"
     CLOSED = "closed"
     HALTED = "halted"
+
+
+class HaltCode(str, Enum):
+    DENIED = "denied"
+    WRONG_ACTOR = "wrong_actor"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+    NO_HANDLER = "no_handler"
+    ADAPTER = "adapter"
+    BAD_SIGNATURE = "bad_signature"
+    INCOMPLETE = "incomplete"
 
 
 @dataclass
@@ -25,6 +36,7 @@ class Job:
     resource: str = "order-1"
     status: Status = Status.PENDING
     reason: str | None = None
+    halt_code: str | None = None
     cursor: int = 0
     events: list[str] = field(default_factory=list)
 
@@ -33,19 +45,32 @@ class Job:
             raise RuntimeError("refusing to close incomplete job")
         self.status = Status.CLOSED
         self.reason = reason
+        self.halt_code = None
 
-    def halt(self, reason: str) -> None:
+    def halt(self, reason: str, code: HaltCode = HaltCode.DENIED) -> None:
         self.status = Status.HALTED
         self.reason = reason
+        self.halt_code = code.value
 
 
 StepFn = Callable[[Job, Graph, Writ], None]
 
 
+def _code_from_reason(reason: str) -> HaltCode:
+    if "revoked" in reason:
+        return HaltCode.REVOKED
+    if "expired" in reason:
+        return HaltCode.EXPIRED
+    if ", not " in reason:
+        return HaltCode.WRONG_ACTOR
+    return HaltCode.DENIED
+
+
 class Runtime:
-    def __init__(self, graph: Graph, ledger: Ledger) -> None:
+    def __init__(self, graph: Graph, ledger: Ledger, issuer: Issuer | None = None) -> None:
         self.graph = graph
         self.ledger = ledger
+        self.issuer = issuer
         self.jobs: dict[str, Job] = {}
         self.handlers: dict[str, StepFn] = {}
 
@@ -62,7 +87,7 @@ class Runtime:
         )
         return job
 
-    def tick(self, job: Job, writ: Writ, *, actor: str | None = None) -> Job:
+    def tick(self, job: Job, writ: Writ, *, actor: str) -> Job:
         if job.status in {Status.CLOSED, Status.HALTED}:
             return job
         if job.cursor >= len(job.steps):
@@ -70,14 +95,23 @@ class Runtime:
             self.ledger.append("job.closed", {"reason": job.reason}, writ_id=writ.id, job_id=job.id)
             return job
 
-        step = job.steps[job.cursor]
-        actor = actor or writ.actor
-        if not writ.allows(actor, step, job.resource):
-            reason = writ.deny_reason(actor, step, job.resource) or f"writ {writ.id} does not allow {step}"
-            job.halt(reason)
+        if self.issuer is not None and not self.issuer.verify(writ):
+            job.halt("writ signature invalid", HaltCode.BAD_SIGNATURE)
             self.ledger.append(
                 "job.halted",
-                {"reason": job.reason, "step": step, "actor": actor},
+                {"reason": job.reason, "code": job.halt_code},
+                writ_id=writ.id,
+                job_id=job.id,
+            )
+            return job
+
+        step = job.steps[job.cursor]
+        if not writ.allows(actor, step, job.resource):
+            reason = writ.deny_reason(actor, step, job.resource) or f"writ {writ.id} does not allow {step}"
+            job.halt(reason, _code_from_reason(reason))
+            self.ledger.append(
+                "job.halted",
+                {"reason": job.reason, "code": job.halt_code, "step": step, "actor": actor},
                 writ_id=writ.id,
                 job_id=job.id,
             )
@@ -85,8 +119,13 @@ class Runtime:
 
         fn = self.handlers.get(step)
         if fn is None:
-            job.halt(f"no handler for {step}")
-            self.ledger.append("job.halted", {"reason": job.reason, "step": step}, writ_id=writ.id, job_id=job.id)
+            job.halt(f"no handler for {step}", HaltCode.NO_HANDLER)
+            self.ledger.append(
+                "job.halted",
+                {"reason": job.reason, "code": job.halt_code, "step": step},
+                writ_id=writ.id,
+                job_id=job.id,
+            )
             return job
 
         prior = self.graph.snapshot()
@@ -95,10 +134,10 @@ class Runtime:
             fn(job, self.graph, writ)
         except Exception as exc:
             self.graph.restore(prior)
-            job.halt(str(exc))
+            job.halt(str(exc)[:200], HaltCode.ADAPTER)
             self.ledger.append(
                 "job.halted",
-                {"reason": job.reason, "step": step},
+                {"reason": job.reason, "code": job.halt_code, "step": step},
                 writ_id=writ.id,
                 job_id=job.id,
             )
@@ -111,7 +150,7 @@ class Runtime:
             self.ledger.append("job.closed", {"reason": job.reason}, writ_id=writ.id, job_id=job.id)
         return job
 
-    def run(self, job: Job, writ: Writ, *, actor: str | None = None) -> Job:
+    def run(self, job: Job, writ: Writ, *, actor: str) -> Job:
         while job.status not in {Status.CLOSED, Status.HALTED}:
             self.tick(job, writ, actor=actor)
         return job

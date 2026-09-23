@@ -1,12 +1,31 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
+import os
+import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from silex.errors import SilexError
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _canonical(actor: str, actions: frozenset[str], resource: str, issued_at: str, expires_at: str | None, writ_id: str) -> bytes:
+    payload = {
+        "id": writ_id,
+        "actor": actor,
+        "actions": sorted(actions),
+        "resource": resource,
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+    }
+    return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
 
 
 @dataclass
@@ -19,6 +38,7 @@ class Writ:
     issued_at: str
     expires_at: str | None = None
     revoked: bool = False
+    signature: str = ""
 
     def allows(self, actor: str, action: str, resource: str, at: datetime | None = None) -> bool:
         return self.deny_reason(actor, action, resource, at) is None
@@ -40,8 +60,19 @@ class Writ:
 
 
 class Issuer:
-    def __init__(self) -> None:
+    def __init__(self, secret: str | None = None) -> None:
+        self.secret = (secret or os.environ.get("SILEX_ISSUER_SECRET") or secrets.token_hex(32)).encode()
         self.issued: dict[str, Writ] = {}
+
+    def _sign(self, writ: Writ) -> str:
+        body = _canonical(writ.actor, writ.actions, writ.resource, writ.issued_at, writ.expires_at, writ.id)
+        return hmac.new(self.secret, body, hashlib.sha256).hexdigest()
+
+    def verify(self, writ: Writ) -> bool:
+        if not writ.signature:
+            return False
+        expected = self._sign(writ)
+        return hmac.compare_digest(expected, writ.signature)
 
     def issue(
         self,
@@ -52,6 +83,10 @@ class Issuer:
         **constraints,
     ) -> Writ:
         action_set = frozenset([actions] if isinstance(actions, str) else actions)
+        if not action_set:
+            raise SilexError("refusing empty action set")
+        if not actor or not resource:
+            raise SilexError("actor and resource are required")
         now = _now()
         expires = (now + timedelta(seconds=ttl_seconds)).isoformat() if ttl_seconds else None
         writ = Writ(
@@ -63,6 +98,7 @@ class Issuer:
             issued_at=now.isoformat(),
             expires_at=expires,
         )
+        writ.signature = self._sign(writ)
         self.issued[writ.id] = writ
         return writ
 

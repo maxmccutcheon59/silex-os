@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+from silex.errors import SilexError
 
 
 @dataclass(frozen=True)
@@ -68,3 +71,20 @@ class Ledger:
                 return False
             prev = entry.digest
         return True
+
+    def save(self, path: str | Path) -> Path:
+        if not self.verify():
+            raise SilexError("refusing to save a broken ledger")
+        dest = Path(path)
+        dest.write_text(json.dumps([asdict(e) for e in self.entries], indent=2))
+        return dest
+
+    @classmethod
+    def load(cls, path: str | Path) -> Ledger:
+        ledger = cls()
+        raw = json.loads(Path(path).read_text())
+        for item in raw:
+            ledger.entries.append(Entry(**item))
+        if not ledger.verify():
+            raise SilexError("ledger failed verification on load")
+        return ledger

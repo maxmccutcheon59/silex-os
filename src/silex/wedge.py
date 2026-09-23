@@ -17,7 +17,8 @@ def build_kitting_cell(*, quality_pass: bool = True) -> tuple[Graph, Ledger, Run
     graph.upsert(Node("cell-1", "cell", {"ready": True, "busy": False, "vendor": "sim"}))
     graph.upsert(Node("quality-1", "gate", {"pass": quality_pass}))
     ledger = Ledger()
-    runtime = Runtime(graph, ledger)
+    issuer = Issuer()
+    runtime = Runtime(graph, ledger, issuer)
     cell = SimulatedCell("cell-1")
 
     def bind(step: str):
@@ -29,4 +30,4 @@ def build_kitting_cell(*, quality_pass: bool = True) -> tuple[Graph, Ledger, Run
     for step in KITTING_STEPS:
         runtime.register(step, bind(step))
     actor = Actor(id="cell-1", kind=ActorKind.CELL, vendor="sim")
-    return graph, ledger, runtime, Issuer(), actor
+    return graph, ledger, runtime, issuer, actor
