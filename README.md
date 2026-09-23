@@ -1,10 +1,10 @@
 # Silex
 
-Authorized work operating system.
+The operating system hardware companies have to call before a robot is allowed to act.
 
-Nothing consequential moves unless this kernel issued a writ and recorded the result. Models may propose work. They cannot execute it.
+Windows sold software to PC makers. Silex sells authorization, completion, and proof to anyone who moves metal — arms, AMRs, humanoids, cells. Models propose. This kernel decides.
 
-The product is the protocol in [PROTOCOL.md](PROTOCOL.md). This repo is the reference kernel.
+The contract is [PROTOCOL.md](PROTOCOL.md). Positioning is [COMPANY.md](COMPANY.md).
 
 ## Install
 
@@ -15,20 +15,8 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Commands
-
 ```bash
 silex demo
 silex replay
-silex replay src/silex/fixtures/kitting_fail.jsonl
 silex serve --port 8080
 ```
-
-## Kernel laws
-
-- No action without a live writ for `(actor, action, resource)`.
-- Failed or denied steps roll the graph back.
-- Jobs do not close incomplete.
-- The ledger verifies or it is not evidence.
-
-Company: [COMPANY.md](COMPANY.md). Doctrine: [DOCTRINE.md](DOCTRINE.md).
