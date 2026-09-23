@@ -1,6 +1,6 @@
 [project]
 name = "silex"
-version = "0.2.0"
+version = "0.3.0"
 description = "Authorized work operating system kernel"
 requires-python = ">=3.11"
 dependencies = []
@@ -15,5 +15,11 @@ silex = "silex.cli:main"
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+silex = ["static/*"]

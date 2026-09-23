@@ -4,22 +4,7 @@ Authorized work operating system. Software that is allowed to finish work.
 
 > Nothing consequential moves unless this kernel issued a writ and this kernel logged what the world did.
 
-Not a chatbot. Not a humanoid. Not a model lab. Models propose. Cells execute. **This repo is the control plane.**
-
-Private company kernel. Public brand name is still open.
-
-## Objects
-
-| Object | Job |
-|---|---|
-| **Actor** | Robot, AMR, cell, human, policy — signed identity |
-| **Graph** | Live typed state of the operation |
-| **Writ** | Capability token: who may do which action on which resource, until when |
-| **Runtime** | Durable job. Finish or halt. Never close incomplete work. |
-| **Ledger** | Hash-chained record of every grant, deny, step, halt |
-| **Adapter** | Thin driver to a simulated or real controller. Kernel does not own metal. |
-
-First wedge: **high-mix kitting cell** — release → confirm parts/cell → pick → place → quality → close.
+Not a chatbot. The console is an operator board. An LLM may **propose** a step list. It cannot execute.
 
 ## Run
 
@@ -27,11 +12,34 @@ First wedge: **high-mix kitting cell** — release → confirm parts/cell → pi
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-silex demo
-silex demo --fail-quality
 pytest -q
+silex demo
+silex serve --port 8080
 ```
 
-## Company
+Open http://127.0.0.1:8080
+
+Optional proposer (still cannot skip writs):
+
+```bash
+export SILEX_LLM_URL=https://api.x.ai/v1/chat/completions
+export SILEX_LLM_KEY=...
+export SILEX_LLM_MODEL=grok-4
+silex serve
+```
+
+If those are unset, the planner is a local rule engine.
+
+## Objects
+
+| Object | Job |
+|---|---|
+| Actor | Signed identity |
+| Graph | Live state |
+| Writ | Capability token |
+| Runtime | Finish or halt |
+| Ledger | Hash-chained proof |
+| Adapter | Simulated or real controller |
+| Planner | Propose only |
 
 See [COMPANY.md](COMPANY.md) and [DOCTRINE.md](DOCTRINE.md).
