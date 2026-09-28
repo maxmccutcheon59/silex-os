@@ -4,7 +4,7 @@ from silex.auth import Role, require
 from silex.channel import Channel
 from silex.errors import SilexError
 from silex.server import serve
-from silex.writ import Issuer, load_issuer_secret
+from silex.writ import load_issuer_secret
 
 
 def test_operator_cannot_revoke():
