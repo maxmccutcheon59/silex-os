@@ -4,9 +4,9 @@ import pytest
 from silex.cli import _safe_out
 from silex.errors import SilexError
 from silex.ledger import Ledger
+from silex.runtime import HaltCode, Status
 from silex.server import serve
 from silex.wedge import KITTING_STEPS, build_kitting_cell
-from silex.runtime import HaltCode, Status
 
 
 def test_remote_bind_refused(monkeypatch):
