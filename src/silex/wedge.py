@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from silex.adapters import SimulatedCell
 from silex.actors import Actor, ActorKind
+from silex.adapters import SimulatedCell
 from silex.channel import Channel
 from silex.graph import Graph, Node
 from silex.ledger import Ledger
