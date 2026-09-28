@@ -89,9 +89,17 @@
       $('chain').textContent = s.chain_ok ? "Ledger verified" : "Ledger broken";
       $('graph').textContent = JSON.stringify({ actor: s.actor, writ: s.writ, graph: s.graph }, null, 2);
       $('proposal').textContent = s.proposal ? JSON.stringify(s.proposal, null, 2) : "No proposal";
-      $('ledger').innerHTML = (s.ledger || []).slice().reverse().map(e =>
-        `<tr><td>${e.kind}</td><td>${JSON.stringify(e.payload)}</td><td class="muted">${e.digest}</td></tr>`
-      ).join("");
+      const rows = (s.ledger || []).slice().reverse().map(e => {
+        const tr = document.createElement('tr');
+        for (const [text, cls] of [[e.kind], [JSON.stringify(e.payload)], [e.digest, 'muted']]) {
+          const td = document.createElement('td');
+          td.textContent = text == null ? '' : String(text);
+          if (cls) td.className = cls;
+          tr.appendChild(td);
+        }
+        return tr;
+      });
+      $('ledger').replaceChildren(...rows);
     }
     $('propose').onclick = () => api('/api/propose', { text: $('goal').value || 'kit order-1' });
     $('submit').onclick = () => api('/api/submit', {});
