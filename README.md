@@ -27,6 +27,22 @@ silex replay
 silex serve --host 127.0.0.1 --port 8080
 ```
 
+`silex demo` runs a simulated kitting cell end to end and prints:
+
+```text
+status   closed
+reason   completed
+ledger   8 entries chain_ok=True
+order    {'status': 'closed', 'sku': 'KIT-A'}
+cell     {'ready': True, 'busy': False, 'vendor': 'sim'}
+```
+
+## Console
+
+`silex serve` starts a local operator console. This is it after a job was proposed, submitted, given a writ, and run to completion; the ledger on the right is hash-chained and verified.
+
+![The Silex operator console after a closed kitting job: job closed 6/6, ledger verified, ledger entries listed](docs/console.png)
+
 ## Docs
 
 | Asset | Use |
