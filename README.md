@@ -6,7 +6,7 @@ A job is an ordered list of steps. A writ is a capability for `(actor, action, r
 
 Silex is not a safety-certified motion controller. OEM safety systems remain in the loop. See [LEGAL.md](LEGAL.md).
 
-Brief: [docs/index.html](docs/index.html) · after Pages is enabled: https://maxmccutcheon59.github.io/silex-os/
+Project brief: [maxmccutcheon59.github.io/silex-os](https://maxmccutcheon59.github.io/silex-os/) (source: [docs/index.html](docs/index.html))
 
 ## Install
 
